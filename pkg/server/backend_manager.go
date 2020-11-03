@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"slices"
 	"sync"
 	"time"
@@ -50,6 +51,10 @@ type Backend struct {
 	id     string
 	idents header.Identifiers
 }
+
+const (
+	ProxyHostHeader string = "X-Tunnel-Proxy-Host"
+)
 
 func (b *Backend) Send(p *client.Packet) error {
 	b.sendLock.Lock()
@@ -351,4 +356,17 @@ func (s *DefaultBackendStorage) GetRandomBackend() (*Backend, error) {
 	// always return the first connection to an agent, because the agent
 	// will close later connections if there are multiple.
 	return s.backends[agentID][0], nil
+}
+
+func GenIndexInfoForBackend(req *http.Request) string {
+	if req == nil {
+		return ""
+	}
+
+	indexInfo := req.Host
+	if len(req.Header.Get(ProxyHostHeader)) != 0 {
+		indexInfo = req.Header.Get(ProxyHostHeader)
+	}
+
+	return indexInfo
 }
