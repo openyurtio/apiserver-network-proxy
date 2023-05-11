@@ -20,6 +20,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -54,7 +55,8 @@ func (t *Tunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer conn.Close()
+	var closeOnce sync.Once
+	defer closeOnce.Do(func() { conn.Close() })
 
 	random := rand.Int63() /* #nosec G404 */
 	dialRequest := &client.Packet{
@@ -75,10 +77,16 @@ func (t *Tunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	closed := make(chan struct{})
 	connected := make(chan struct{})
 	connection := &ProxyClientConnection{
-		Mode:      "http-connect",
-		HTTP:      conn,
+		Mode: "http-connect",
+		HTTP: io.ReadWriter(conn), // pass as ReadWriter so the caller must close with CloseHTTP
+		CloseHTTP: func() error {
+			closeOnce.Do(func() { conn.Close() })
+			close(closed)
+			return nil
+		},
 		connected: connected,
 		start:     time.Now(),
 		backend:   backend,
@@ -103,6 +111,7 @@ func (t *Tunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case <-connection.connected: // Waiting for response before we begin full communication.
+	case <-closed: // Connection was closed before being established
 	}
 
 	if connection.connectID == 0 {
