@@ -379,7 +379,7 @@ func (a *Client) Serve() {
 				conn:   conn,
 				dataCh: dataCh,
 				cleanFunc: func() {
-					klog.V(2).InfoS("close connection", "connectionID", connID)
+					klog.V(2).InfoS("close connection", "serverID", a.serverID, "connectionID", connID)
 					resp := &client.Packet{
 						Type:    client.PacketType_CLOSE_RSP,
 						Payload: &client.Packet_CloseResponse{CloseResponse: &client.CloseResponse{}},
@@ -409,11 +409,11 @@ func (a *Client) Serve() {
 
 			go a.remoteToProxy(connID, ctx)
 			go a.proxyToRemote(connID, ctx)
-			klog.V(2).Infof("received dial request to %s:%s with random=%d and connID=%d", dialReq.Protocol, dialReq.Address, dialReq.Random, connID)
+			klog.V(2).Infof("received dial request to %s:%s with server=%s, random=%d and connID=%d", a.serverID, dialReq.Protocol, dialReq.Address, dialReq.Random, connID)
 
 		case client.PacketType_DATA:
 			data := pkt.GetData()
-			klog.V(4).InfoS("received DATA", "connectionID", data.ConnectID)
+			klog.V(4).InfoS("received DATA", "serverID", a.serverID, "connectionID", data.ConnectID)
 
 			ctx, ok := a.connManager.Get(data.ConnectID)
 			if ok {
@@ -424,7 +424,7 @@ func (a *Client) Serve() {
 			closeReq := pkt.GetCloseRequest()
 			connID := closeReq.ConnectID
 
-			klog.V(4).InfoS("received CLOSE_REQ", "connectionID", connID)
+			klog.V(4).InfoS("received CLOSE_REQ", "serverID", a.serverID, "connectionID", connID)
 
 			ctx, ok := a.connManager.Get(connID)
 			if ok {

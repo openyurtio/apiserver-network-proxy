@@ -58,7 +58,7 @@ func (t *Tunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var closeOnce sync.Once
 	defer closeOnce.Do(func() { conn.Close() })
 
-	random := rand.Int63() /* #nosec G404 */
+	random := rand.NewSource(time.Now().UnixNano()).Int63() /* #nosec G404 */
 	dialRequest := &client.Packet{
 		Type: client.PacketType_DIAL_REQ,
 		Payload: &client.Packet_DialRequest{
