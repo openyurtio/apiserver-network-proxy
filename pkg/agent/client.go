@@ -409,7 +409,7 @@ func (a *Client) Serve() {
 
 			go a.remoteToProxy(connID, ctx)
 			go a.proxyToRemote(connID, ctx)
-			klog.V(2).Infof("received dial request to %s:%s with server=%s, random=%d and connID=%d", a.serverID, dialReq.Protocol, dialReq.Address, dialReq.Random, connID)
+			klog.V(2).Infof("received dial request to %s:%s with server=%s, random=%d and connID=%d", dialReq.Protocol, dialReq.Address, a.serverID, dialReq.Random, connID)
 
 		case client.PacketType_DATA:
 			data := pkt.GetData()
